@@ -1,0 +1,17 @@
+{
+  "extensions": [".py", ".js", ".ts", ".jsx", ".tsx"],
+  "source_dirs": ["src", "app", "lib"],
+  "test_dirs": ["tests", "__tests__", "test"],
+  "test_prefix": "test_",
+  "test_suffix": ["_test", ".test", ".spec"],
+  "exclude_dirs": [
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    ".next",
+    "dist",
+    "build"
+  ],
+  "report_file": "audit_report.md"
+}
