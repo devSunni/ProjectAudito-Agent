@@ -7,8 +7,24 @@
 - **범용 언어 지원**: Python, JavaScript, TypeScript, Go, Rust 등 다양한 언어 인식.
 - **테스트 갭 분석**: 구현 파일에 대응하는 테스트 파일 누락 항목 자동 식별.
 - **GitIgnore 존중**: 대상 프로젝트의 `.gitignore` 설정을 자동으로 읽어 분석 대상에서 제외합니다.
+- **Auto-Fixer (NEW)**: 누락된 유닛 테스트 스켈레톤을 생성하고, README의 프로젝트 구조 섹션을 자동으로 업데이트합니다.
 - **설정 가능**: `.auditor.json` 파일을 통한 커스터마이징.
-- **전역 CLI**: 한 번의 설치로 시스템 어디서든 `auditor` 명령으로 사용 가능.
+
+## 프로젝트 구조 (Auto-Updated) 📂
+
+<!-- AUDITOR_STRUCTURE_START -->
+```text
+ProjectAudito-Agent
+├── tests
+│   └── test_auditor.py
+├── .auditor.json
+├── .gitignore
+├── README.md
+├── auditor.py
+├── pyproject.toml
+└── standard_refactor_guide.md
+```
+<!-- AUDITOR_STRUCTURE_END -->
 
 ## 설치 및 요구사항
 

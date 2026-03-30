@@ -144,6 +144,110 @@ class ProjectAuditorPro:
 
         return sources, tests, missing
 
+    def _generate_tree(self) -> str:
+        """Generates a tree-like string of the project structure excluding ignored files."""
+        tree_lines = ["```text"]
+        
+        def _build_tree(directory: Path, prefix: str = ""):
+            items = sorted([item for item in directory.iterdir() if not self._should_exclude(item)], key=lambda x: (not x.is_dir(), x.name))
+            for i, item in enumerate(items):
+                is_last = (i == len(items) - 1)
+                connector = "└── " if is_last else "├── "
+                tree_lines.append(f"{prefix}{connector}{item.name}")
+                if item.is_dir():
+                    _build_tree(item, prefix + ("    " if is_last else "│   "))
+
+        tree_lines.append(self.root_dir.name)
+        _build_tree(self.root_dir)
+        tree_lines.append("```")
+        return "\n".join(tree_lines)
+
+    def update_readme_structure(self):
+        readme_path = self.root_dir / "README.md"
+        if not readme_path.exists():
+            logger.warning("README.md not found in root. Skipping update.")
+            return
+
+        tree_str = self._generate_tree()
+        marker_start = "<!-- AUDITOR_STRUCTURE_START -->"
+        marker_end = "<!-- AUDITOR_STRUCTURE_END -->"
+
+        try:
+            with open(readme_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            if marker_start in content and marker_end in content:
+                new_content = content.split(marker_start)[0] + \
+                              marker_start + "\n" + tree_str + "\n" + \
+                              marker_end + content.split(marker_end)[1]
+                with open(readme_path, "w", encoding="utf-8") as f:
+                    f.write(new_content)
+                logger.info("Successfully updated README.md project structure section.")
+            else:
+                logger.warning(f"Could not find markers '{marker_start}' and '{marker_end}' in README.md. Please add them.")
+        except Exception as e:
+            logger.error(f"Failed to update README.md: {e}")
+
+    def fix_missing_tests(self):
+        _, _, missing = self.analyze_gaps()
+        if not missing:
+            logger.info("No missing tests found. Nothing to fix.")
+            return
+
+        logger.info(f"Generating test scaffolding for {len(missing)} files...")
+        
+        # Templates per extension
+        templates = {
+            ".py": "import unittest\n\nclass Test{ClassName}(unittest.TestCase):\n    def test_example(self):\n        self.assertTrue(True)\n\nif __name__ == '__main__':\n    unittest.main()",
+            ".js": "describe('{FileName}', () => {{\n  it('should work', () => {{\n    expect(true).toBe(true);\n  }});\n}});",
+            ".ts": "describe('{FileName}', () => {{\n  it('should work', () => {{\n    expect(true).toBe(true);\n  }});\n}});",
+            ".go": "package {PkgName}\n\nimport \"testing\"\n\nfunc TestExample(t *testing.T) {{\n    // TODO: implement\n}}"
+        }
+
+        test_root = self.root_dir / self.config["test_dirs"][0]
+        if not test_root.exists():
+            test_root.mkdir(parents=True)
+            logger.info(f"Created test directory: {test_root}")
+
+        for m in missing:
+            ext = m.suffix
+            if ext not in templates:
+                logger.warning(f"No template for extension {ext}. Skipping {m.name}.")
+                continue
+
+            # Determine target test path
+            # Simple approach: same relative path under test_root
+            try:
+                rel_base = m.relative_to(self.root_dir)
+                # Remove common source dirs from relative path to flatten or map to tests
+                for src_dir in self.config["source_dirs"]:
+                    if str(rel_base).startswith(src_dir):
+                        rel_base = Path(*rel_base.parts[1:])
+                        break
+                
+                test_file_path = test_root / f"{self.config['test_prefix']}{rel_base.stem}{ext}"
+                if not test_file_path.parent.exists():
+                    test_file_path.parent.mkdir(parents=True)
+
+                if test_file_path.exists():
+                    logger.debug(f"Test file already exists: {test_file_path}. Skipping.")
+                    continue
+
+                # Prepare template
+                class_name = m.stem.capitalize().replace("_", "")
+                content = templates[ext].format(
+                    ClassName=class_name,
+                    FileName=m.stem,
+                    PkgName="main" # simplistic for Go
+                )
+
+                with open(test_file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                logger.info(f"Generated: {test_file_path.relative_to(self.root_dir)}")
+
+            except Exception as e:
+                logger.error(f"Failed to generate test for {m}: {e}")
+
     def generate_report(self):
         sources, tests, missing = self.analyze_gaps()
         coverage_pct = (1 - len(missing) / len(sources)) * 100 if sources else 100
@@ -172,6 +276,12 @@ class ProjectAuditorPro:
                 except ValueError:
                     rel_path = m
                 report_lines.append(f"- [ ] `{rel_path}`")
+            
+            report_lines.extend([
+                "",
+                "### 💡 Tip",
+                "Run `py -m auditor --fix-tests` to automatically generate skeleton test files for these gaps."
+            ])
         else:
             report_lines.append("## ✅ All files have matching tests!")
 
@@ -195,9 +305,19 @@ def main():
     parser = argparse.ArgumentParser(description="Professional Universal Project Auditor")
     parser.add_argument("--root", default=".", help="Project root directory")
     parser.add_argument("--config", help="Path to config file")
+    parser.add_argument("--update-readme", action="store_true", help="Update project structure in README.md")
+    parser.add_argument("--fix-tests", action="store_true", help="Generate missing test skeletons")
     args = parser.parse_args()
 
     auditor = ProjectAuditorPro(args.root, args.config)
+    
+    if args.update_readme:
+        auditor.update_readme_structure()
+    
+    if args.fix_tests:
+        auditor.fix_missing_tests()
+    
+    # Always generate report if no specific action or along with actions
     auditor.generate_report()
 
 if __name__ == "__main__":

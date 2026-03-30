@@ -26,12 +26,12 @@ description: Project Refactor Pro - Universal Standard Workflow
 // turbo
 1. **환경 준비**: 필요한 디렉토리를 생성합니다 (`mkdir -p`).
 2. **코드 이동**: 파일을 새로운 위치로 옮기고, 정적 분석 툴을 통해 임포트 깨짐을 수정합니다.
-3. **테스트 보강**: `auditor.py`에서 식별된 '테스트 갭'을 우선적으로 메웁니다.
-4. **문서화**: `README.md`에 변경된 구조와 로컬 실행/테스트 방법을 업데이트합니다.
+3. **테스트 보강**: `auditor --fix-tests`를 실행하여 누락된 테스트 스켈레톤을 자동으로 생성한 뒤 내용을 채웁니다.
+4. **문서화**: `auditor --update-readme`를 실행하여 `README.md`에 변경된 프로젝트 구조를 자동으로 반영합니다.
 
 ## 4. 검증 단계 (Verification)
 - 전체 테스트 스위트를 실행하여 회귀 오류(Regression)가 없는지 확인합니다.
-- `auditor.py`를 재실행하여 리포트 상의 지표(Test Coverage)가 개선되었는지 확인합니다.
+- `auditor`를 재실행하여 리포트 상의 지표(Test Coverage)가 개선되었는지 확인합니다.
 - `walkthrough.md`를 작성하여 사용자에게 변경 사항을 시각적으로 설명합니다.
 
 ---
